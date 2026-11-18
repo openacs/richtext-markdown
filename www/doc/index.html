@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Richtext Markdown</title>
+<h1>Richtext Markdown</h1>
+
+<p>The Markdown editor adds Write and Preview controls to the OpenACS richtext
+widget. It uses Marked and DOMPurify. It supports
+fenced code, tables, strikethrough, and task lists with read-only markers.</p>
+
+<h2>Installation</h2>
+
+<ol>
+  <li>Copy <code>richtext-markdown</code> into the OpenACS <code>packages</code>
+      directory and install it through the Package Manager.</li>
+  <li>Reload or restart OpenACS so the editor registers as <code>markdown</code>.</li>
+  <li>Enable <code>UseHtmlAreaForRichtextP</code> and set <code>RichTextEditor</code>
+      to <code>markdown</code> in the <code>acs-templating</code> parameters to use
+      it in standard richtext fields, including forum message forms.</li>
+</ol>
+
+<p>A specific <code>ad_form</code> field can select the editor with
+<code>{options {editor markdown}}</code> and <code>{htmlarea_p 1}</code>.</p>
+
+<h2>Library administration</h2>
+
+<p>The <a href="/acs-admin/package/richtext-markdown/">sitewide admin page</a>
+shows the configured and latest library versions, the source in use, and
+links to security advisories. To select different versions, set the following
+parameters in the NaviServer configuration and restart OpenACS.</p>
+
+<pre>ns_section ns/server/${server}/acs/richtext-markdown {
+    ns_param MarkedVersion 18.2.1
+    ns_param DOMPurifyVersion 3.4.18
+    ns_param TurndownVersion 7.2.5
+}</pre>
+
+<p>The example values are the defaults. A local copy takes precedence.
+When the configured version is missing locally, OpenACS serves it through
+jsDelivr. Use the admin page to download that version and update the
+registered URN to the local copy. Downloads are verified against the selected version's SHA-256 file hash
+from jsDelivr metadata using NaviServer's built-in checksum support.
+A failed verification leaves the existing local file intact.</p>
+
+<p>Other OpenACS pages can load the same libraries with
+<code>template::head::add_javascript -src urn:ad:js:marked</code> and
+<code>template::head::add_javascript -src urn:ad:js:dompurify</code>.</p>
+
+<h2>Storage and rendering</h2>
+
+<p>New and edited Markdown is submitted as <code>text/html</code> through the
+standard richtext widget. The HTML ends with a versioned comment containing
+the original Markdown encoded as UTF-8 Base64. The editor reads the comment
+when reopening the value. OpenACS can display the HTML directly and use its
+existing HTML-to-text conversion for search. Keep the comment intact if an
+import or post-processing step needs to preserve the Markdown source. Keep
+the size of both the HTML and its source in mind when choosing fields with a
+fixed storage limit.</p>
+
+<p>Existing <code>text/markdown</code> values are converted when saved through
+this editor. Other existing values keep their original content and MIME type
+until edited. Turndown converts legacy HTML to Markdown in Write mode.
+Some elements, such as tables and definition lists, remain HTML where
+Markdown cannot preserve their structure. Preview and submission use the
+original HTML while the body is unchanged. JavaScript is required for preview
+and Markdown conversion.</p>
+
+<h2>Pasting images</h2>
+
+<p>In XoWiki, paste a PNG, JPEG, or GIF into the Write tab to insert a
+Markdown image link. The upload is visible to you in Preview as soon as
+it finishes. Saving the page attaches each referenced image to the page
+so it is deleted with the page. Uploading requires permission to create
+content in the page's folder. Unused staged uploads expire after a day.
+The OpenACS HTML policy must allow <code>IMG</code> in saved content.</p>
+
+<p>In Forums, paste into Write when the forum allows attachments. Pasted
+images appear in the editor preview and in the forum's posting preview.
+Saving the message adds each referenced upload to the message's attachments.
+Unused draft uploads expire after a day.</p>
+
+<p>In News, pasted images appear in the editor's Preview and in the
+article confirmation preview. Saving attaches them to the article item,
+so the URLs keep working across revisions. Unused staged uploads expire
+after a day.</p>
+
+<h2>OpenACS HTML policy</h2>
+
+<p>DOMPurify sanitizes the browser-generated HTML. The regular server-side
+OpenACS HTML checks still apply when the form is submitted. If your
+<code>acs-kernel</code> HTML policy starts from the stock defaults, allow
+<code>THEAD</code> and <code>TH</code> for tables, <code>DEL</code> for
+strikethrough, and <code>IMG</code> for images where appropriate. Allow the
+<code>start</code> attribute if you use ordered lists starting at a number
+other than one.</p>
+</html>

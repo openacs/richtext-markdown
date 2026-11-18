@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package key="richtext-markdown" url="http://openacs.org/repository/apm/packages/richtext-markdown" type="apm_service">
+    <package-name>Richtext Markdown</package-name>
+    <pretty-plural>Richtext Markdown Editors</pretty-plural>
+    <initial-install-p>f</initial-install-p>
+    <singleton-p>t</singleton-p>
+    <implements-subsite-p>f</implements-subsite-p>
+    <inherit-templates-p>f</inherit-templates-p>
+
+    <version name="0.1d1" url="http://openacs.org/repository/download/apm/richtext-markdown-0.1d1.apm">
+        <owner url="mailto:neumann@wu-wien.ac.at">Gustaf Neumann</owner>
+        <summary>Markdown editing with preview for the OpenACS richtext widget.</summary>
+        <release-date>2026-11-18</release-date>
+        <maturity>0</maturity>
+
+        <provides url="richtext-markdown" version="0.1d1"/>
+        <requires url="acs-tcl" version="6.0.0d15"/>
+        <requires url="acs-templating" version="6.0.0d9"/>
+        <requires url="attachments" version="0.11"/>
+    </version>
+</package>

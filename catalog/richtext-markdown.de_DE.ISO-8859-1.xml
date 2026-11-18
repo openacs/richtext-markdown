@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<message_catalog package_key="richtext-markdown" locale="de_DE" charset="ISO-8859-1">
+  <msg key="Write">Schreiben</msg>
+  <msg key="Preview">Vorschau</msg>
+  <msg key="Render_error">Der Markdown-Text konnte nicht dargestellt werden.</msg>
+  <msg key="Unavailable">Der Markdown-Editor ist nicht verfügbar. Laden Sie die Seite neu und versuchen Sie es erneut.</msg>
+  <msg key="Image_upload_pending">Das eingefügte Bild wird hochgeladen ...</msg>
+  <msg key="Image_upload_error">Das Bild konnte nicht hochgeladen werden. Fügen Sie ein PNG-, JPEG- oder GIF-Bild ein und versuchen Sie es erneut.</msg>
+  <msg key="Pasted_image">Eingefügtes Bild</msg>
+</message_catalog>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<message_catalog package_key="richtext-markdown" locale="en_US" charset="ISO-8859-1">
+  <msg key="Write">Write</msg>
+  <msg key="Preview">Preview</msg>
+  <msg key="Render_error">The Markdown could not be rendered.</msg>
+  <msg key="Unavailable">The Markdown editor is unavailable. Reload the page to try again.</msg>
+  <msg key="Image_upload_pending">Uploading pasted image...</msg>
+  <msg key="Image_upload_error">The image could not be uploaded. Paste a PNG, JPEG, or GIF and try again.</msg>
+  <msg key="Pasted_image">Pasted image</msg>
+</message_catalog>
