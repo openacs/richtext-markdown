@@ -3,6 +3,7 @@
   <msg key="Write">Scrivi</msg>
   <msg key="Preview">Anteprima</msg>
   <msg key="Render_error">Impossibile visualizzare il testo Markdown.</msg>
+  <msg key="Format_conversion_error">Impossibile convertire il testo in HTML. Il testo e il formato originali sono stati mantenuti.</msg>
   <msg key="Unavailable">L'editor Markdown non è disponibile. Ricarica la pagina per riprovare.</msg>
   <msg key="Image_upload_pending">Caricamento dell'immagine incollata...</msg>
   <msg key="Image_upload_error">Impossibile caricare l'immagine. Incolla un'immagine PNG, JPEG o GIF e riprova.</msg>

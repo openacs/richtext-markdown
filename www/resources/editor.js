@@ -52,7 +52,10 @@
     if (converter) {
         const escapeMarkdown = converter.escape;
         converter.escape = text => text.split(/(\[\[[^\r\n]*?\]\])/g)
-            .map((part, index) => index % 2 ? part : escapeMarkdown.call(converter, part))
+            // A literal '<' from an HTML text node must not become a raw
+            // Markdown HTML tag (e.g. plain text containing '<example>').
+            .map((part, index) => index % 2 ? part
+                : escapeMarkdown.call(converter, part).replace(/</g, "\\<"))
             .join("");
         // These elements have no equivalent that preserves their full structure in Markdown.
         converter.keep(["table", "dl", "sub", "sup"]);
@@ -107,7 +110,7 @@
     let nextImageId = 0;
 
     function initialize(field, [, initialFormat, renderError, unavailable, legacyHtml, originalHtml, formatField,
-        , uploadUrl, uploadToken, uploadPending, uploadError, imageLabel]) {
+        , uploadUrl, uploadToken, uploadPending, uploadError, imageLabel, formatSelector]) {
         const form = field && field.form;
         if (!(field instanceof HTMLTextAreaElement) || !form || field.matches(":disabled") || field.readOnly || !field.name) {
             return;
@@ -116,7 +119,9 @@
         const name = field.name;
         const expectsFormatField = formatField !== "0" && formatField !== "false";
         const format = expectsFormatField ? form.elements.namedItem(name + ".format") : null;
-        if (expectsFormatField && (!(format instanceof HTMLInputElement) || format.type !== "hidden")) {
+        const selectableFormat = formatSelector === "1" && format instanceof HTMLSelectElement;
+        if (expectsFormatField && !selectableFormat
+            && (!(format instanceof HTMLInputElement) || format.type !== "hidden")) {
             return;
         }
 
@@ -345,13 +350,106 @@
         });
     }
 
+    function bindFormatSelector(field, config) {
+        const form = field?.form;
+        const select = form?.elements.namedItem(field.name + ".format");
+        if (!(field instanceof HTMLTextAreaElement) || !(select instanceof HTMLSelectElement)
+            || field.disabled || field.readOnly) return;
+
+        let current = select.value;
+        let pending = false;
+        const drafts = new Map([[current, field.value]]);
+        const status = document.createElement("div");
+        status.setAttribute("role", "alert");
+        status.hidden = true;
+        select.after(status);
+
+        function mount(html) {
+            field.value = html;
+            const activeConfig = config.slice();
+            activeConfig[1] = "text/html";
+            activeConfig[5] = html;
+            initialize(field, activeConfig);
+        }
+        if (current === "text/html") mount(config[5] ?? field.value);
+
+        // Conversion is asynchronous. Never submit an intermediate format/body.
+        form.addEventListener("submit", event => {
+            if (pending) event.preventDefault();
+        }, { capture: true });
+        select.addEventListener("change", async () => {
+            const target = select.value;
+            if (pending || target === current) {
+                select.value = current;
+                return;
+            }
+            select.value = current;
+            const textDraft = field.value;
+            if (editors.has(field) && !editors.get(field)()) return;
+            drafts.set(current, field.value);
+            status.hidden = true;
+
+            let value = drafts.get(target);
+            if (value === undefined && target === "text/html") {
+                pending = true;
+                select.disabled = true;
+                field.readOnly = true;
+                form.setAttribute("aria-busy", "true");
+                try {
+                    if (!textDraft) {
+                        value = "";
+                    } else if (current === "text/markdown") {
+                        // Already Markdown: use this editor's renderer rather
+                        // than the server's legacy Markdown converter, and
+                        // retain the exact source instead of round-tripping
+                        // it through HTML and Turndown.
+                        const html = sanitize(parser.parse(textDraft, { async: false })).trim();
+                        value = html ? html + "\n<!--openacs-markdown:v1:" + encode(textDraft) + "-->" : "";
+                    } else {
+                        if (!config[14]) throw new Error("No format converter");
+                        const response = await fetch(config[14], {
+                            method: "POST",
+                            credentials: "same-origin",
+                            body: new URLSearchParams({
+                                contents: textDraft, format: current, __csrf_token: config[15]
+                            })
+                        });
+                        if (!response.ok) throw new Error("Format conversion failed");
+                        value = await response.text();
+                    }
+                } catch (error) {
+                    field.value = drafts.get(current);
+                    status.textContent = config[16]
+                        || "The text could not be converted to HTML. Your original text and format have been kept.";
+                    status.hidden = false;
+                    return;
+                } finally {
+                    pending = false;
+                    select.disabled = false;
+                    field.readOnly = false;
+                    form.removeAttribute("aria-busy");
+                }
+            }
+            if (value === undefined) value = textDraft;
+            select.value = target;
+            current = target;
+            if (target === "text/html") mount(value);
+            else field.value = value;
+        });
+    }
+
     const configurations = new Map();
     for (const encoded of window.openacsMarkdownWidgets || []) {
         const config = encoded.map(decode);
         const id = config[0];
         configurations.set(id, config);
         if (config[7] !== "1" && config[7] !== "true") {
-            initialize(document.getElementById(id), config);
+            const field = document.getElementById(id);
+            if (config[13] === "1") {
+                bindFormatSelector(field, config);
+            } else {
+                initialize(field, config);
+            }
         }
     }
 
