@@ -83,7 +83,19 @@
         }
         if (html && converter) {
             try {
-                return converter.turndown(sanitize(html, true));
+                const fragment = sanitize(html, true);
+                // Turndown recognizes code blocks only as PRE > CODE. Legacy
+                // wiki pages also use bare PRE, sometimes with styled spans.
+                for (const pre of fragment.querySelectorAll("pre")) {
+                    for (const br of pre.querySelectorAll("br")) br.replaceWith("\n");
+                    if (pre.childNodes.length !== 1 || pre.firstChild?.nodeName !== "CODE") {
+                        const code = document.createElement("code");
+                        code.className = pre.querySelector("code")?.className || "";
+                        code.textContent = pre.textContent;
+                        pre.replaceChildren(code);
+                    }
+                }
+                return converter.turndown(fragment);
             } catch (error) {
                 // Keep the HTML editable if conversion fails.
             }
