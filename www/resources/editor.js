@@ -30,10 +30,30 @@
         }
     });
 
+    // Wiki references are plain text for Markdown; the embedding application
+    // resolves them later. Preserve punctuation inside them as well.
+    if (parser) {
+        parser.use({ extensions: [{
+            name: "wikiReference",
+            level: "inline",
+            start: source => source.indexOf("[["),
+            tokenizer(source) {
+                const match = /^\[\[[^\r\n]*?\]\]/.exec(source);
+                if (match) return { type: "wikiReference", raw: match[0], text: match[0] };
+            },
+            renderer: token => token.text.replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        }] });
+    }
+
     const converter = typeof window.TurndownService === "function"
         ? new window.TurndownService({ headingStyle: "atx", codeBlockStyle: "fenced" })
         : null;
     if (converter) {
+        const escapeMarkdown = converter.escape;
+        converter.escape = text => text.split(/(\[\[[^\r\n]*?\]\])/g)
+            .map((part, index) => index % 2 ? part : escapeMarkdown.call(converter, part))
+            .join("");
         // These elements have no equivalent that preserves their full structure in Markdown.
         converter.keep(["table", "dl", "sub", "sup"]);
         converter.addRule("strikethrough", {
