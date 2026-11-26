@@ -253,6 +253,39 @@
                 showStatus(renderError);
                 return;
             }
+            // XoWiki stores portable child-image wiki references. Resolve them
+            // only for Preview; saved HTML and Markdown retain the references.
+            if (uploadUrl) {
+                const endpoint = new URL(uploadUrl, window.location.href);
+                const pageId = endpoint.searchParams.get("page_id");
+                if (pageId && pageId !== "0") {
+                    endpoint.pathname = endpoint.pathname.replace(/markdown-image-upload$/, "markdown-image");
+                    endpoint.search = "";
+                    endpoint.searchParams.set("page_id", pageId);
+                    const walker = document.createTreeWalker(preview, NodeFilter.SHOW_TEXT);
+                    const nodes = [];
+                    while (walker.nextNode()) nodes.push(walker.currentNode);
+                    for (const node of nodes) {
+                        if (node.parentElement.closest("pre, code")) continue;
+                        const pattern = /\[\[\.SELF\.\/image:(pasted-[1-9][0-9]*\.(?:png|jpeg|gif))\]\]/g;
+                        const fragment = document.createDocumentFragment();
+                        let offset = 0;
+                        for (const match of node.textContent.matchAll(pattern)) {
+                            fragment.append(node.textContent.slice(offset, match.index));
+                            const img = document.createElement("img");
+                            endpoint.searchParams.set("name", match[1]);
+                            img.src = endpoint.pathname + endpoint.search;
+                            img.alt = imageLabel;
+                            fragment.append(img);
+                            offset = match.index + match[0].length;
+                        }
+                        if (offset) {
+                            fragment.append(node.textContent.slice(offset));
+                            node.replaceWith(fragment);
+                        }
+                    }
+                }
+            }
             status.hidden = true;
             selectMode(true);
         }, options);
@@ -278,6 +311,14 @@
                 let failed = false;
                 try {
                     const body = new FormData();
+                    // Multipart form parsing must also receive endpoint parameters
+                    // such as the XoWiki parent_id in the POST body.
+                    const uploadEndpoint = new URL(uploadUrl, window.location.href);
+                    for (const [name, value] of uploadEndpoint.searchParams) {
+                        if (name !== "upload" && name !== "__csrf_token") {
+                            body.append(name, value);
+                        }
+                    }
                     body.append("upload", image);
                     body.append("__csrf_token", uploadToken);
                     const response = await fetch(uploadUrl, {
