@@ -75,6 +75,46 @@
         });
     }
 
+    // Only our attachment URLs carry dimension hints. XoWiki references and
+    // external images retain their existing rendering. The server validates
+    // actual dimensions and authorizes every original/variant request.
+    function responsiveImages(html) {
+        const template = document.createElement("template");
+        template.innerHTML = html;
+        for (const img of template.content.querySelectorAll("img")) {
+            let url;
+            try { url = new URL(img.getAttribute("src"), window.location.href); }
+            catch (error) { continue; }
+            if (url.origin !== window.location.origin || !url.pathname.endsWith("/markdown-image")
+                || !(url.searchParams.has("key") || url.searchParams.has("image_id"))) continue;
+            const originalWidth = Number(url.searchParams.get("image_width"));
+            const originalHeight = Number(url.searchParams.get("image_height"));
+            if (!Number.isSafeInteger(originalWidth) || !Number.isSafeInteger(originalHeight)
+                || originalWidth <= 0 || originalHeight <= 0) continue;
+            url.searchParams.delete("width");
+            const original = url.pathname + url.search;
+            const widths = [320, 640, 960, 1280, 1920].filter(width => width < originalWidth);
+            const candidates = widths.map(width => [original + "&width=" + width, width]);
+            if (originalWidth <= 1920) candidates.push([original, originalWidth]);
+            const requestedWidth = Number(img.getAttribute("width"));
+            const displayWidth = Math.min(originalWidth,
+                Number.isSafeInteger(requestedWidth) && requestedWidth > 0 ? requestedWidth : 960);
+            const fallback = candidates.find(([, width]) => width >= displayWidth)
+                || candidates[candidates.length - 1];
+            img.setAttribute("src", fallback[0]);
+            img.setAttribute("srcset", candidates.map(([src, width]) => src + " " + width + "w").join(", "));
+            img.setAttribute("sizes", "(max-width: " + displayWidth + "px) 100vw, " + displayWidth + "px");
+            // Set intrinsic dimensions only when the author has not supplied them.
+            if (!img.hasAttribute("width") && !img.hasAttribute("height")) {
+                img.setAttribute("width", String(displayWidth));
+                img.setAttribute("height", String(Math.round(originalHeight * displayWidth / originalWidth)));
+            }
+            // Use the site's normal responsive-image classes (Bootstrap 3/4/5).
+            img.classList.add("img-responsive", "img-fluid");
+        }
+        return template.innerHTML;
+    }
+
     function markdownSource(html) {
         const match = sourceComment.exec(html);
         if (match) {
@@ -184,7 +224,7 @@
         }
         function render() {
             if (field.value !== cachedSource) {
-                cachedHtml = sanitize(parser.parse(field.value, { async: false })).trim();
+                cachedHtml = responsiveImages(sanitize(parser.parse(field.value, { async: false }))).trim();
                 cachedSource = field.value;
             }
             return cachedHtml;
@@ -247,7 +287,7 @@
             }
             try {
                 preview.innerHTML = unchanged()
-                    ? sanitize(initialFormat === "text/html" ? initialValue : legacyHtml)
+                    ? responsiveImages(sanitize(initialFormat === "text/html" ? initialValue : legacyHtml))
                     : render();
             } catch (error) {
                 showStatus(renderError);
@@ -345,8 +385,24 @@
                     if (url.origin !== window.location.origin || !/^https?:$/.test(url.protocol)) {
                         throw new Error("Unexpected image URL");
                     }
-                    const alt = imageLabel.replace(/[\\[\]]/g, "\\$&");
-                    replacement = "![" + alt + "](<" + url.pathname + url.search + ">)";
+                    const originalWidth = Number(url.searchParams.get("image_width"));
+                    const originalHeight = Number(url.searchParams.get("image_height"));
+                    if (url.pathname.endsWith("/markdown-image")
+                        && (url.searchParams.has("key") || url.searchParams.has("image_id"))
+                        && Number.isSafeInteger(originalWidth) && originalWidth > 0
+                        && Number.isSafeInteger(originalHeight) && originalHeight > 0) {
+                        // Keep the editable source short: responsive variants are
+                        // generated when rendering. A width alone preserves aspect
+                        // ratio and can be changed directly in the Write tab.
+                        const img = document.createElement("img");
+                        img.setAttribute("src", url.pathname + url.search);
+                        img.setAttribute("alt", imageLabel);
+                        img.setAttribute("width", String(Math.min(originalWidth, 960)));
+                        replacement = img.outerHTML;
+                    } else {
+                        const alt = imageLabel.replace(/[\\[\]]/g, "\\$&");
+                        replacement = "![" + alt + "](<" + url.pathname + url.search + ">)";
+                    }
                 } catch (error) {
                     failed = true;
                 } finally {

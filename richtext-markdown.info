@@ -7,13 +7,14 @@
     <implements-subsite-p>f</implements-subsite-p>
     <inherit-templates-p>f</inherit-templates-p>
 
-    <version name="0.1d2" url="http://openacs.org/repository/download/apm/richtext-markdown-0.1d2.apm">
+    <version name="0.1d3" url="http://openacs.org/repository/download/apm/richtext-markdown-0.1d3.apm">
         <owner url="mailto:neumann@wu-wien.ac.at">Gustaf Neumann</owner>
         <summary>Markdown editing with preview for the OpenACS richtext widget.</summary>
-        <release-date>2026-11-26</release-date>
+        <release-date>2026-11-27</release-date>
         <maturity>0</maturity>
 
-        <provides url="richtext-markdown" version="0.1d2"/>
+        <provides url="richtext-markdown" version="0.1d3"/>
+        <requires url="acs-kernel" version="6.0.0d10"/>
         <requires url="acs-tcl" version="6.0.0d15"/>
         <requires url="acs-templating" version="6.0.0d9"/>
         <requires url="attachments" version="0.11"/>
