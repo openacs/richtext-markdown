@@ -267,7 +267,7 @@
                     while (walker.nextNode()) nodes.push(walker.currentNode);
                     for (const node of nodes) {
                         if (node.parentElement.closest("pre, code")) continue;
-                        const pattern = /\[\[\.SELF\.\/image:(pasted-[1-9][0-9]*\.(?:png|jpeg|gif))\]\]/g;
+                        const pattern = /\[\[\.SELF\.\/image:(pasted-[1-9][0-9]*\.(?:png|jpeg|gif))(?:\|([^|\r\n]*))?(?:\|([^\r\n]*?))?\]\]/g;
                         const fragment = document.createDocumentFragment();
                         let offset = 0;
                         for (const match of node.textContent.matchAll(pattern)) {
@@ -275,7 +275,17 @@
                             const img = document.createElement("img");
                             endpoint.searchParams.set("name", match[1]);
                             img.src = endpoint.pathname + endpoint.search;
-                            img.alt = imageLabel;
+                            img.alt = match[2] || imageLabel;
+                            // XoWiki image dimensions are CSS lengths. Accept
+                            // only lengths, never arbitrary CSS or Tcl expressions.
+                            const dimensions = /(?:^|\s)-(width|height)\s+(?:\{([^{}]+)\}|"([^"\r\n]+)"|([^\s]+))(?=\s|$)/g;
+                            for (const dimension of (match[3] || "").matchAll(dimensions)) {
+                                const value = (dimension[2] || dimension[3] || dimension[4]).trim();
+                                if (/^(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)(?:px|%|em|rem|ch|ex|vw|vh|vmin|vmax|cm|mm|in|pt|pc)$/i.test(value)
+                                    || value === "0") {
+                                    img.style.setProperty(dimension[1], value);
+                                }
+                            }
                             fragment.append(img);
                             offset = match.index + match[0].length;
                         }

@@ -68,7 +68,7 @@ ad_proc -public ::richtext::markdown::add_editor {
     set ::acs_blank_master(markdown_toolbar) 1
     ::template::head::add_javascript -defer -order 10.1 -src urn:ad:js:marked
     ::template::head::add_javascript -defer -order 10.2 -src urn:ad:js:dompurify
-    ::template::head::add_javascript -defer -order 10.4 -src $base/editor.js?v=14
+    ::template::head::add_javascript -defer -order 10.4 -src $base/editor.js?v=16
 
     set original_html {}
     set legacy_html {}
